@@ -1,3 +1,58 @@
+'''
+# attempting map view
+import tkinter as tk
+from tkintermapview import TkinterMapView
+import requests
+
+curr_location = "34891 Perry Rd, Union City, CA, 94587, USA"
+# getting coordinateS from address, simulating "current location"
+def geocode_address(address):
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {"q": address, "format": "json"}
+    headers = {"User-Agent": "tkintermapview-app"}
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+    lat = float(data[0]["lat"])
+    lon = float(data[0]["lon"])
+    return lat, lon
+
+w, h = 1000, 500
+
+# create main window
+root = tk.Tk()
+root.title("carplay-interface")
+root.configure(bg='black')
+
+x = (root.winfo_screenwidth() - w) // 2
+y = (root.winfo_screenheight() - h) // 2
+root.geometry(f"{w}x{h}+{x}+{y}")
+
+map_widget = TkinterMapView(root, corner_radius=0)
+map_widget.pack(fill="both", expand=True)
+
+# geocode the address and set position
+lat, lon = geocode_address(curr_location)
+sjsu_lat, sjsu_lon = geocode_address("San Jose State University")
+map_widget.set_position(lat, lon)
+map_widget.set_marker(lat, lon)
+
+
+mid_lat = (lat + sjsu_lat) / 2
+mid_lon = (lon + sjsu_lon) / 2
+map_widget.set_position(mid_lat, mid_lon)
+map_widget.set_zoom(10)
+
+# Markers
+marker_curr = map_widget.set_marker(lat, lon, text="Current Location")
+marker_sjsu = map_widget.set_marker(sjsu_lat, sjsu_lon, text="SJSU")
+
+# Draw path between points
+path = map_widget.set_path([(lat, lon), (sjsu_lat, sjsu_lon)])
+
+# Mainloop
+root.mainloop()
+
+'''
 # all work done in main.py until organized in seperate files
 import speech_recognition as sr
 import tkinter as tk
@@ -69,22 +124,22 @@ def logo_animation_cycle():
 
 label.config(image=photos[0])
 
-def listen_for_command():
-    with mic as source:
-        print("Say something")
-        audio = r.listen(source)
-
+def callback(recognizer, audio):
     try:
-        if r.recognize_google(audio) == "hey bunny":
+        text = recognizer.recognize_google(audio).lower()
+        if "hey bunny" in text:
             logo_animation_cycle()
     except sr.UnknownValueError:
         print("Sorry, I didn’t understand that.")
     except sr.RequestError as e:
         print(f"API error: {e}")
 
-
-threading.Thread(target=listen_for_command, daemon=True).start()
+# Start listening in the background
+stop_listening = r.listen_in_background(mic, callback)
 
 root.mainloop()
+
+
+
 
 
